@@ -1,0 +1,47 @@
+[
+  {
+    "question": "What is spatial intelligence?",
+    "expected_pages": [1, 2],
+    "answerable": true
+  },
+  {
+    "question": "What are the five key domains of SenseNova-SI-8M?",
+    "expected_pages": [2, 4, 5],
+    "answerable": true
+  },
+  {
+    "question": "What benchmarks are used to evaluate SenseNova-SI?",
+    "expected_pages": [6, 7],
+    "answerable": true
+  },
+  {
+    "question": "What are the benchmark scores for Seed-1.6-2025-06-15?",
+    "expected_pages": [6],
+    "answerable": true
+  },
+  {
+    "question": "What performance does SenseNova-SI InternVL3-8B achieve?",
+    "expected_pages": [6],
+    "answerable": true
+  },
+  {
+    "question": "Why is perspective-taking important in this paper?",
+    "expected_pages": [2, 4, 5, 7],
+    "answerable": true
+  },
+  {
+    "question": "What does the paper say about Chain-of-Thought for spatial intelligence?",
+    "expected_pages": [9, 10],
+    "answerable": true
+  },
+  {
+    "question": "What downstream task is used to validate SenseNova-SI?",
+    "expected_pages": [10],
+    "answerable": true
+  },
+  {
+    "question": "What is something not mentioned in this document?",
+    "expected_pages": [],
+    "answerable": false
+  }
+]

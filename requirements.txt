@@ -1,0 +1,44 @@
+# Core RAG / LangChain
+langchain
+langchain-community
+langchain-huggingface
+langchain-ollama
+langchain-text-splitters
+
+# Vector database
+chromadb
+
+# Embeddings + reranking
+sentence-transformers
+transformers
+torch
+
+# Sparse retrieval / hybrid search
+rank-bm25
+
+# PDF / document loading
+pymupdf
+pypdf
+python-docx
+
+# API backend
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+google-genai
+
+# Frontend
+streamlit
+
+# Data / evaluation
+pandas
+numpy
+scikit-learn
+
+# Environment variables
+python-dotenv
+
+# Optional utilities
+tqdm
+rich

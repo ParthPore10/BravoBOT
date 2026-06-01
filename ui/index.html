@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BravoBOT</title>
+    <link rel="stylesheet" href="styles.css?v=bravobot-1" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark">B</div>
+          <p class="eyebrow">Local RAG Workspace</p>
+          <h1>BravoBOT</h1>
+          <p class="summary">Upload sources, ask focused questions, and inspect citations from your private document index.</p>
+        </div>
+
+        <section class="settings" aria-label="Retrieval settings">
+          <form id="uploadForm" class="upload-panel">
+            <input id="fileInput" class="file-input-hidden" type="file" accept=".pdf,.txt" multiple />
+            <div class="file-drop">
+              <span class="source-poster" aria-hidden="true">
+                <span class="poster-label poster-label-primary">source</span>
+                <span class="poster-label poster-label-secondary">notebook</span>
+                <span class="source-stack">
+                  <span></span><span></span><span></span>
+                </span>
+                <span class="shape shape-flower"></span>
+                <span class="shape shape-blue"></span>
+                <span class="shape shape-purple"></span>
+                <span class="shape shape-green"></span>
+                <span class="shape shape-orange"></span>
+                <span class="shape shape-scribble"></span>
+                <span class="poster-caption">Upload sources</span>
+              </span>
+            </div>
+
+            <div class="upload-meta">
+              <div>
+                <p class="upload-kicker">Notebook Sources</p>
+                <h3 id="fileLabel">Upload your documents</h3>
+                <p>Drop in PDFs or TXT files and chat with your private source library.</p>
+              </div>
+              <div id="selectedFiles" class="selected-files" aria-live="polite"></div>
+
+              <label class="replace-row">
+                <input id="replaceIndex" type="checkbox" checked />
+                Replace current sources
+              </label>
+
+              <div id="uploadButton" class="secondary-button" role="button" tabindex="0">
+                <span id="uploadButtonText">Upload</span>
+              </div>
+              <div id="uploadProgress" class="upload-progress" aria-hidden="true">
+                <span></span>
+              </div>
+              <p id="uploadResult" class="upload-result"></p>
+            </div>
+          </form>
+
+          <details class="advanced-settings">
+            <summary>Retrieval settings</summary>
+
+            <label>
+              API URL
+              <input id="apiUrl" type="url" value="http://127.0.0.1:8000/chat" />
+            </label>
+
+            <div class="setting-grid">
+              <label>
+                Candidates
+                <input id="candidateK" type="number" min="1" max="50" value="8" />
+              </label>
+
+              <label>
+                Sources
+                <input id="finalK" type="number" min="1" max="20" value="5" />
+              </label>
+            </div>
+          </details>
+        </section>
+
+        <div class="status-block">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusText">Ready</span>
+        </div>
+      </aside>
+
+      <section class="workspace" aria-label="Chat workspace">
+        <header class="workspace-header">
+          <div>
+            <p class="chat-strip chat-strip-pink">BravoBOT</p>
+            <h2><span class="chat-strip chat-strip-yellow">ask your sources</span></h2>
+          </div>
+        </header>
+
+        <div id="messages" class="messages">
+          <article class="message assistant">
+            <div class="avatar avatar-character"></div>
+            <div class="bubble">
+              <p>Ask a question about your uploaded document. BravoBOT will answer using the indexed sources and show citations below the response.</p>
+            </div>
+          </article>
+        </div>
+
+        <form id="chatForm" class="composer">
+          <textarea id="queryInput" rows="3" placeholder="Ask about the document..." required></textarea>
+          <button id="sendButton" type="submit">
+            <span>Send</span>
+            <span aria-hidden="true">↵</span>
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <script src="app.js?v=bravobot-1"></script>
+  </body>
+</html>
