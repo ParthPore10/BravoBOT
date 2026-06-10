@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from app.rag_pipeline import answer_query
@@ -82,6 +83,7 @@ def evaluate():
 
         response = answer_query(
             query=question,
+            user_id=os.getenv("EVAL_USER_ID", "user-a"),
             candidate_k=5,
             final_k=3
         )

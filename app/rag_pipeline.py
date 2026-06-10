@@ -53,6 +53,36 @@ Content:
 
     return "\n".join(context_blocks)
 
+def build_hyde_prompt(query:str):
+    return f"""
+Write a short document passage that would likely contain the answer to the
+question below.
+
+Requirements:
+- Write 100 to 150 words.
+- Use factual, document-like language.
+- Include relevant terminology from the question.
+- Do not mention that the passage is hypothetical.
+- Do not include commentary or citations.
+- Output only the passage.
+
+Question:
+{query}
+
+Passage:
+""".strip()
+
+def generate_hyde_document(query: str) -> str:
+    try:
+        prompt = build_hyde_prompt(query)
+        hyde_document = generate_answer(prompt).strip()
+
+        if hyde_document:
+            return hyde_document
+    except Exception as exc:
+        print(f"HyDE generation failed: {exc}")
+
+    return query
 
 def build_prompt(query: str, context: str):
     prompt = f"""
@@ -222,14 +252,21 @@ def dedupe_results(results):
         unique_results.append(result)
     return unique_results
 
-def build_rag_prompt(query: str, candidate_k: int = 5, final_k: int = 3):
+def build_rag_prompt(query: str, user_id:str,candidate_k: int = 5, final_k: int = 3):
     start = time.perf_counter()
 
+    hyde_start = time.perf_counter()
+    dense_query = generate_hyde_document(query)
+    print(f"hyde_generation: {time.perf_counter() - hyde_start:.2f}s")
+
+    hybrid_start = time.perf_counter()
     hybrid_results = hybrid_search(
-        query=query,
+        original_query=query,
+        dense_query=dense_query,
+        user_id=user_id,
         top_k=candidate_k
     )
-    print(f"hybrid_search: {time.perf_counter() - start:.2f}s")
+    print(f"hybrid_search: {time.perf_counter() - hybrid_start:.2f}s")
 
     dedupe_start = time.perf_counter()
     hybrid_results = dedupe_results(hybrid_results)
@@ -291,9 +328,10 @@ def stream_normal_chat(query: str):
         "sources": [],
     }
     
-def answer_query(query: str, candidate_k: int = 5, final_k: int = 3):
+def answer_query(query: str, user_id :str,candidate_k: int = 5, final_k: int = 3):
     prompt, reranked_results, start = build_rag_prompt(
         query=query,
+        user_id=user_id,
         candidate_k=candidate_k,
         final_k=final_k,
     )
@@ -309,9 +347,10 @@ def answer_query(query: str, candidate_k: int = 5, final_k: int = 3):
     }
 
 
-def stream_answer_query(query: str, candidate_k: int = 5, final_k: int = 3):
+def stream_answer_query(query: str,user_id:str, candidate_k: int = 5, final_k: int = 3):
     prompt, reranked_results, start = build_rag_prompt(
         query=query,
+        user_id=user_id,
         candidate_k=candidate_k,
         final_k=final_k,
     )

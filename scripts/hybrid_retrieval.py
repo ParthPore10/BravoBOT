@@ -1,5 +1,7 @@
+import os
+
 from app.hybrid_retriever import hybrid_search
-from app.config import RRF_K
+from app.rag_pipeline import generate_hyde_document
 
 def print_results(results):
     if not results:
@@ -36,7 +38,12 @@ def main():
         print("Query cannot be empty.")
         return
 
-    results = hybrid_search(query=query, top_k=5)
+    results = hybrid_search(
+        original_query=query,
+        dense_query=generate_hyde_document(query),
+        user_id=os.getenv("EVAL_USER_ID", "user-a"),
+        top_k=5,
+    )
     print_results(results)
 
 

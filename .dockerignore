@@ -1,0 +1,12 @@
+.venv/
+.venv-eval/
+.git/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+data/raw/uploads/*
+data/processed/*
+vectorstore/*
+docs/

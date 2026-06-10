@@ -5,6 +5,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import StreamingResponse
+from fastapi import Header
 
 from app.document_ingestion import get_upload_status, has_indexed_uploads, ingest_uploaded_files
 from app.jobs import create_jobs, get_job, run_ingestion_job
@@ -68,16 +69,34 @@ def health_check():
 
 
 @app.get("/sources/status")
-def sources_status():
-    return get_upload_status()
+def sources_status(
+    x_user_id: Annotated[str, Header(alias="X-User-ID")],
+):
+    user_id = x_user_id.strip()
+
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-User-ID header is required.",
+        )
+
+    return get_upload_status(user_id)
 
 
 @app.post("/upload")
 async def upload_documents(
     background_tasks: BackgroundTasks,
     files: Annotated[list[UploadFile], File(...)],
+    x_user_id: Annotated[str, Header(alias="X-User-ID")],
     replace: Annotated[bool, Form()] = True,
 ):
+    user_id = x_user_id.strip()
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-User-ID header is required.",
+        )
+
     if not files:
         raise HTTPException(
             status_code=400,
@@ -97,13 +116,14 @@ async def upload_documents(
 
         uploaded_files.append((file.filename, content))
 
-    job_id = create_jobs()
+    job_id = create_jobs(user_id)
 
     background_tasks.add_task(
         run_ingestion_job,
         job_id,
         ingest_uploaded_files,
         uploaded_files,
+        user_id,
         replace
     )
 
@@ -115,8 +135,19 @@ async def upload_documents(
 
 
 @app.get("/jobs/{job_id}")
-def job_status(job_id: str):
-    job = get_job(job_id)
+def job_status(
+    job_id: str,
+    x_user_id: Annotated[str, Header(alias="X-User-ID")],
+):
+    user_id = x_user_id.strip()
+
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-User-ID header is required.",
+        )
+
+    job = get_job(job_id, user_id)
 
     if job is None:
         raise HTTPException(
@@ -207,7 +238,15 @@ def clean_chat_error(error: Exception) -> str:
 
 
 @app.post("/chat", response_model=APIChatResponse)
-def chat(request: APIChatRequest):
+def chat(request: APIChatRequest,
+         x_user_id: Annotated[str,Header(alias="X-User-ID")]):
+    user_id = x_user_id.strip()
+
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-User-ID header is required."
+        )
     if not request.query.strip():
         raise HTTPException(
             status_code=400,
@@ -222,7 +261,7 @@ def chat(request: APIChatRequest):
             sources=[]
         )
 
-    if not has_indexed_uploads():
+    if not has_indexed_uploads(user_id):
         raise HTTPException(
             status_code=400,
             detail="Upload a PDF or TXT source before asking questions."
@@ -230,6 +269,7 @@ def chat(request: APIChatRequest):
 
     response = answer_query(
         query=request.query,
+        user_id=user_id,
         candidate_k=request.candidate_k,
         final_k=request.final_k
     )
@@ -241,7 +281,15 @@ def chat(request: APIChatRequest):
 
 
 @app.post("/chat/stream")
-def chat_stream(request: APIChatRequest):
+def chat_stream(request: APIChatRequest,
+                x_user_id: Annotated[str,Header(alias="X-User-ID")]):
+    user_id = x_user_id.strip()
+
+    if not user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="X-User-ID header is required."
+            )
     if not request.query.strip():
         raise HTTPException(
             status_code=400,
@@ -265,7 +313,7 @@ def chat_stream(request: APIChatRequest):
             media_type="application/x-ndjson",
         )
 
-    if not has_indexed_uploads():
+    if not has_indexed_uploads(user_id):
         raise HTTPException(
             status_code=400,
             detail="Upload a PDF or TXT source before asking questions."
@@ -275,6 +323,7 @@ def chat_stream(request: APIChatRequest):
         try:
             for event in stream_answer_query(
                 query=request.query,
+                user_id=user_id,
                 candidate_k=request.candidate_k,
                 final_k=request.final_k,
             ):

@@ -4,10 +4,10 @@ from app.job_store import create_job_record, get_job_record, update_job_record
 
 
 
-def create_jobs()->str:
+def create_jobs(user_id: str)->str:
     job_id = f"job_{uuid4().hex}"
     
-    create_job_record(job_id)
+    create_job_record(job_id, user_id)
     
     return job_id
 
@@ -19,15 +19,16 @@ def update_job(job_id: str, status: str, result=None, error=None):
         error=error
     )
 
-def get_job(job_id :str):
-    return get_job_record(job_id)
+def get_job(job_id: str, user_id: str):
+    return get_job_record(job_id, user_id)
 
-def run_ingestion_job(job_id :str, ingest_fun, uploaded_files, replace :bool):
+def run_ingestion_job(job_id :str, ingest_fun, uploaded_files,user_id:str, replace :bool):
     update_job(job_id=job_id,
                status='running')
     try:
         result = ingest_fun(
             uploaded_files = uploaded_files,
+            user_id=user_id,
             replace =replace
         )
         update_job(

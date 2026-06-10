@@ -4,9 +4,10 @@ from app.retriever import dense_search, search_bm25
 def rrf(rank:int)->float:
     return 1/(RRF_K+rank)
 
-def hybrid_search(query :str, top_k : int=5):
-    dense_results = dense_search(query=query,top_k = top_k)
-    bm25_results = search_bm25(query=query,top_k=top_k)
+def hybrid_search(original_query :str, dense_query:str,user_id:str,
+                  top_k : int=5):
+    dense_results = dense_search(query=dense_query,user_id=user_id,top_k = top_k)
+    bm25_results = search_bm25(query=original_query,user_id=user_id, top_k=top_k)
 
     fused={}
 

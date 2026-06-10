@@ -1,42 +1,14 @@
-from pathlib import Path
+import os
 
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from app.retriever import dense_search
 
-PERSIST_DIR = Path("vectorstore/Chroma")
-EMBEDDINGS_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-
-def load_vectors():
-    persist_dir = Path(PERSIST_DIR)
-
-    if not persist_dir.exists():
-        raise FileNotFoundError("The given directory path doesnt exist. Enter a valid path")
-    
-    embeddings = HuggingFaceEmbeddings(
-        model_name = EMBEDDINGS_MODEL
-    )
-
-    vectorstore = Chroma(
-        persist_directory=persist_dir,
-        embedding_function=embeddings
-    )
-
-    return vectorstore
-
-def retrieve(query : str, top_k :int=3):
-    vectorstore = load_vectors()
-
-    results = vectorstore.similarity_search_with_score(
-        query=query,
-        k=top_k
-    )
-    return results
-
-def print_results(results : retrieve)->None:
+def print_results(results)->None:
     if not results:
         print("No results found")
     
-    for rank, (docs,score) in enumerate(results,start=1):
+    for rank, result in enumerate(results,start=1):
+        docs = result["doc"]
+        score = result["dense_score"]
         metadata = docs.metadata
 
         source_file = metadata.get("source_file","unknown")
@@ -63,7 +35,11 @@ def main():
     
     top_k =3
 
-    results = retrieve(query=query, top_k=top_k)
+    results = dense_search(
+        query=query,
+        user_id=os.getenv("EVAL_USER_ID", "user-a"),
+        top_k=top_k,
+    )
     print_results(results)
 
 if __name__ =="__main__":

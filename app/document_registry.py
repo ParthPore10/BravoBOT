@@ -23,11 +23,16 @@ def save_registry(registry):
     with open(registry_path,'w',encoding='utf-8') as f:
         json.dump(registry,f,indent=4,ensure_ascii=False)
 
-def find_document_by_hash(file_hash):
+def find_document_by_hash(file_hash :str,
+                          user_id:str):
+
     documents = load_registry()
 
     for document in documents:
-        if document['file_hash'] == file_hash:
+        if (
+            document.get("file_hash") == file_hash
+            and document.get("user_id") == user_id
+        ):
             return document
     return None
 
@@ -37,6 +42,15 @@ def add_document_record(document_record :dict[str,object]):
     documents.append(document_record)
     save_registry(documents)
     return document_record
+
+def remove_documents_for_user(user_id: str) -> None:
+    documents = load_registry()
+    remaining_documents = [
+        document
+        for document in documents
+        if document.get("user_id") != user_id
+    ]
+    save_registry(remaining_documents)
 
 def update_document_status(document_id:str,status:str,num_chunks :int=None, num_pages :int =None):
     documents = load_registry()
@@ -53,4 +67,3 @@ def update_document_status(document_id:str,status:str,num_chunks :int=None, num_
             save_registry(documents)
             return document
     return None
-

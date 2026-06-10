@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app.database import SessionLocal
 
 
-def create_job_record(job_id: str):
+def create_job_record(job_id: str, user_id: str):
     now = datetime.now()
 
     db = SessionLocal()
@@ -15,6 +15,7 @@ def create_job_record(job_id: str):
             text("""
                 INSERT INTO upload_jobs (
                     job_id,
+                    user_id,
                     status,
                     result_json,
                     error,
@@ -23,6 +24,7 @@ def create_job_record(job_id: str):
                 )
                 VALUES (
                     :job_id,
+                    :user_id,
                     :status,
                     :result_json,
                     :error,
@@ -32,6 +34,7 @@ def create_job_record(job_id: str):
             """),
             {
                 "job_id": job_id,
+                "user_id": user_id,
                 "status": "pending",
                 "result_json": None,
                 "error": None,
@@ -46,13 +49,14 @@ def create_job_record(job_id: str):
         db.close()
 
 
-def get_job_record(job_id: str):
+def get_job_record(job_id: str, user_id: str):
     db = SessionLocal()
     try:
         row = db.execute(
             text("""
                 SELECT
                     job_id,
+                    user_id,
                     status,
                     result_json,
                     error,
@@ -60,8 +64,12 @@ def get_job_record(job_id: str):
                     updated_at
                 FROM upload_jobs
                 WHERE job_id = :job_id
+                  AND user_id = :user_id
             """),
-            {"job_id": job_id}
+            {
+                "job_id": job_id,
+                "user_id": user_id,
+            }
         ).mappings().first()
 
         if row is None:
@@ -74,6 +82,7 @@ def get_job_record(job_id: str):
 
         return {
             "job_id": row["job_id"],
+            "user_id": row["user_id"],
             "status": row["status"],
             "result": result,
             "error": row["error"],

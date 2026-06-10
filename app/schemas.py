@@ -5,6 +5,7 @@ from typing import List, Optional,Any
 @dataclass
 class DocumentRecord:
     document_id :str
+    user_id :str
     source_file :str
     file_name :str
     document_type :str
@@ -17,6 +18,7 @@ class DocumentRecord:
 @dataclass
 class DocumentChunk:
     chunk_id :str
+    user_id :str
     source_file : str
     page_number : int
     chunk_index :int

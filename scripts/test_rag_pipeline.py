@@ -1,3 +1,5 @@
+import os
+
 from app.rag_pipeline import answer_query
 
 
@@ -38,6 +40,7 @@ def main():
 
     response = answer_query(
         query=query,
+        user_id=os.getenv("EVAL_USER_ID", "user-a"),
         candidate_k=5,
         final_k=3
     )

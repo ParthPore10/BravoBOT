@@ -8,11 +8,7 @@ from rank_bm25 import BM25Okapi
 from app.config import CHUNKS_PATH, EMBEDDINGS_MODEL
 from app.document_ingestion import get_active_vectorstore_dir
 
-BM25_CACHE = {
-    "mtime": None,
-    "chunks" : None,
-    "bm25" : None
-}
+BM25_CACHE = {}
 
 VECTORSTORE_CACHE = {
     'persist_dir' : None,
@@ -24,7 +20,7 @@ def load_vectorstore():
 
     if not (persist_dir / "chroma.sqlite3").exists():
         raise FileNotFoundError("The given directory path doesnt exist. Enter a valid path")
-    
+
     if VECTORSTORE_CACHE['persist_dir'] == persist_dir:
         return VECTORSTORE_CACHE['vectorstore']
 
@@ -41,14 +37,15 @@ def load_vectorstore():
     VECTORSTORE_CACHE["vectorstore"] = vectorstore
     return vectorstore
 
-def dense_search(query :str, top_k :int=5):
+def dense_search(query :str,user_id :str, top_k :int=5):
     vectorstore = load_vectorstore()
 
     results = vectorstore.similarity_search_with_score(
         query=query,
-        k=top_k
+        k=top_k,
+        filter={"user_id":user_id}
     )
-    
+
     dense_rank=[]
     for rank, (doc, score) in enumerate(results, start=1):
         dense_rank.append(
@@ -88,31 +85,48 @@ def build_bm25(chunks):
     return bm25
 
 
-def get_bm25_index():
+def get_bm25_index(user_id:str):
     json_path = Path(CHUNKS_PATH)
 
     if not json_path.exists():
         raise FileNotFoundError("Invalid path. Enter a valid path")
 
     current_mtime = json_path.stat().st_mtime
+    cached = BM25_CACHE.get(user_id)
 
-    if BM25_CACHE["mtime"] == current_mtime:
-        return BM25_CACHE["chunks"], BM25_CACHE["bm25"]
+    if cached and cached['mtime']==current_mtime:
+        return cached['chunks'], cached["bm25"]
 
-    chunks = load_chunks()
+    chunks = [
+        chunk
+        for chunk in load_chunks()
+        if chunk.get("user_id") == user_id
+    ]
+
     if not chunks:
-        raise ValueError("NO Chunks available for bm25 search")
+        BM25_CACHE[user_id] = {
+            "mtime":current_mtime,
+            "chunks":[],
+            "bm25":None,
+        }
+        return [],None
     
     bm25 = build_bm25(chunks)
 
-    BM25_CACHE["mtime"] = current_mtime
-    BM25_CACHE["chunks"] = chunks
-    BM25_CACHE["bm25"] = bm25
+    BM25_CACHE[user_id] = {
+        "mtime": current_mtime,
+        "chunks": chunks,
+        "bm25": bm25,
+    }
 
     return chunks, bm25
 
-def search_bm25(query :str, top_k : int=3):
-    chunks,bm25 = get_bm25_index()
+def search_bm25(query :str, user_id: str, top_k : int=3):
+
+    chunks,bm25 = get_bm25_index(user_id)
+
+    if not chunks or bm25 is None:
+        return []
 
     tokenize_query = tokenize(query)
     scores =bm25.get_scores(tokenize_query)
@@ -123,11 +137,11 @@ def search_bm25(query :str, top_k : int=3):
         reverse=True
     )
 
-    bm25_results = []
+    results = []
 
     for rank,index in enumerate(ranked_index[:top_k],start=1):
         chunk = chunks[index]
-        bm25_results.append(
+        results.append(
             {
                 "chunk_id": chunk["chunk_id"],
                 "chunk": chunk,
@@ -135,4 +149,4 @@ def search_bm25(query :str, top_k : int=3):
                 "bm25_rank": rank
             }
         )
-    return bm25_results
+    return results

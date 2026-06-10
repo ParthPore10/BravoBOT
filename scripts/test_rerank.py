@@ -1,4 +1,7 @@
+import os
+
 from app.hybrid_retriever import hybrid_search
+from app.rag_pipeline import generate_hyde_document
 from app.rerank import reranker
 
 
@@ -36,7 +39,13 @@ def main():
         print("Query cannot be empty.")
         return
 
-    hybrid_results = hybrid_search(query=query, top_k=5)
+    dense_query = generate_hyde_document(query)
+    hybrid_results = hybrid_search(
+        original_query=query,
+        dense_query=dense_query,
+        user_id=os.getenv("EVAL_USER_ID", "user-a"),
+        top_k=5,
+    )
 
     reranked_results = reranker(
         query=query,

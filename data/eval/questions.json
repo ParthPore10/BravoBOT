@@ -1,47 +1,94 @@
 [
   {
-    "question": "What is spatial intelligence?",
-    "expected_pages": [1, 2],
-    "answerable": true
+    "question_id": "q1",
+    "question": "What relationship did the authors find between AugReg and increasing the amount of training data?",
+    "reference_answer": "The authors found that carefully selected data augmentation and regularization can provide accuracy gains comparable to increasing the training dataset size by approximately ten times. However, models achieving similar performance still require roughly similar compute.",
+    "relevance": {
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_1": 3,
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_0": 1
+    }
   },
   {
-    "question": "What are the five key domains of SenseNova-SI-8M?",
-    "expected_pages": [2, 4, 5],
-    "answerable": true
+    "question_id": "q2",
+    "question": "Which datasets were used for pre-training and transfer-learning evaluation?",
+    "reference_answer": "The models were pre-trained on ImageNet-1k and ImageNet-21k. Transfer-learning evaluation primarily used CIFAR-100, Oxford-IIIT Pets, Resisc45, and Kitti-distance from the VTAB benchmark. Some experiments also used the complete VTAB benchmark.",
+    "relevance": {
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_2": 3
+    }
   },
   {
-    "question": "What benchmarks are used to evaluate SenseNova-SI?",
-    "expected_pages": [6, 7],
-    "answerable": true
+    "question_id": "q3",
+    "question": "What metric did the paper use to evaluate models on the image-classification datasets?",
+    "reference_answer": "The paper used top-1 classification accuracy as its main evaluation metric. Fine-tuning hyperparameters were selected using validation data, and final results were generally reported on test splits.",
+    "relevance": {
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_2": 3
+    }
   },
   {
-    "question": "What are the benchmark scores for Seed-1.6-2025-06-15?",
-    "expected_pages": [6],
-    "answerable": true
+    "question_id": "q4",
+    "question": "What three viewpoints on the computational cost of training vision models are discussed in the paper?",
+    "reference_answer": "The paper discusses pre-training cost, practitioner cost, and deployment cost. Pre-training cost covers obtaining the initial model, practitioner cost covers adaptation, fine-tuning, or training for a specific task, and deployment cost emphasizes inference expenses over many model invocations.",
+    "relevance": {
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_2": 3
+    }
   },
   {
-    "question": "What performance does SenseNova-SI InternVL3-8B achieve?",
-    "expected_pages": [6],
-    "answerable": true
+    "question_id": "q5",
+    "question": "What are the paper's main recommendations for training and selecting Vision Transformer models?",
+    "reference_answer": "The paper recommends using checkpoints pre-trained on more and more varied upstream data, applying data augmentation and regularization carefully, and considering model performance together with compute and deployment constraints instead of relying only on parameter count or ImageNet-1k accuracy.",
+    "relevance": {
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_10": 3,
+      "doc_cb3e4167da3a43618cdb210bd480be0f_chunk_1": 1
+    }
   },
-  {
-    "question": "Why is perspective-taking important in this paper?",
-    "expected_pages": [2, 4, 5, 7],
-    "answerable": true
-  },
-  {
-    "question": "What does the paper say about Chain-of-Thought for spatial intelligence?",
-    "expected_pages": [9, 10],
-    "answerable": true
-  },
-  {
-    "question": "What downstream task is used to validate SenseNova-SI?",
-    "expected_pages": [10],
-    "answerable": true
-  },
-  {
-    "question": "What is something not mentioned in this document?",
-    "expected_pages": [],
-    "answerable": false
-  }
+{
+  "question_id": "q6",
+  "question": "Why do Vision Transformers generally require more training data or stronger regularization than convolutional neural networks?",
+  "reference_answer": "Vision Transformers have weaker image-specific inductive biases than convolutional neural networks. In particular, they do not inherently provide the same translational equivariance, making them more reliant on large datasets, data augmentation, and regularization to avoid overfitting."
+},
+{
+  "question_id": "q7",
+  "question": "Which Vision Transformer model sizes were evaluated in the study?",
+  "reference_answer": "The study evaluated ViT-Tiny, ViT-Small, ViT-Base, and ViT-Large configurations. It also evaluated hybrid models combining ResNet components with Vision Transformers."
+},
+{
+  "question_id": "q8",
+  "question": "Which hardware and software frameworks were used for training and inference measurements?",
+  "reference_answer": "Pre-training and transfer learning were performed using a unified JAX and Flax codebase on TPUs. Inference-speed measurements were conducted on NVIDIA V100 GPUs using the timm PyTorch library."
+},
+{
+  "question_id": "q9",
+  "question": "Why did the authors use TensorFlow Datasets?",
+  "reference_answer": "The authors accessed datasets through TensorFlow Datasets to improve consistency and reproducibility across their experiments."
+},
+{
+  "question_id": "q10",
+  "question": "How large are ImageNet-1k and ImageNet-21k?",
+  "reference_answer": "ImageNet-1k contains approximately 1.3 million training images across 1,000 object categories. ImageNet-21k contains approximately 14 million images across about 21,000 categories."
+},
+{
+  "question_id": "q11",
+  "question": "Which downstream datasets represented natural, specialized, and geometric visual tasks?",
+  "reference_answer": "CIFAR-100 and Oxford-IIIT Pets represented natural-image classification. Resisc45 represented images captured by specialized equipment, while Kitti-distance represented a geometric visual task."
+},
+{
+  "question_id": "q12",
+  "question": "What does the paper mean by practitioner cost?",
+  "reference_answer": "Practitioner cost is the time and compute spent adapting an available pre-trained model, tuning a fine-tuning strategy, or training a task-specific model from scratch. It assumes that the initial pre-trained checkpoint is free or that its cost has been amortized."
+},
+{
+  "question_id": "q13",
+  "question": "What does the paper mean by deployment cost?",
+  "reference_answer": "Deployment cost is the inference cost incurred when a trained model is used in practice. In large-scale deployments, repeated inference may dominate and amortize the earlier costs of pre-training and adaptation."
+},
+{
+  "question_id": "q14",
+  "question": "How many Vision Transformer models did the authors release?",
+  "reference_answer": "The authors released more than 50,000 Vision Transformer models trained using diverse configurations and datasets."
+},
+{
+  "question_id": "q15",
+  "question": "Why did the authors train and evaluate models using a consistent setup?",
+  "reference_answer": "A consistent setup controls implementation details, augmentation schemes, hyperparameters, preprocessing, and dataset splits. This reduces experimental noise and enables fairer comparisons between model sizes, datasets, regularization methods, and compute budgets."
+}
 ]

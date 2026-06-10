@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from pathlib import Path
+import hashlib
 import json
 import uuid
 from datetime import datetime
@@ -10,7 +11,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 from app.config import ACTIVE_PERSIST_PATH, CHUNKS_PATH, EMBEDDINGS_MODEL, PERSIST_DIR, REGISTRY_PATH
 from scripts.ingest import create_document_chunks
-from app.document_registry import find_document_by_hash,add_document_record,update_document_status
+from app.document_registry import (
+    add_document_record,
+    find_document_by_hash,
+    remove_documents_for_user,
+    update_document_status,
+)
 from app.utils import compute_file_hash,generate_document_id
 
 RAW_UPLOAD_DIR = Path("data/raw/uploads")
@@ -20,6 +26,17 @@ SUPPORTED_EXTENSIONS = {".pdf", ".txt"}
 def clean_filename(filename: str) -> str:
     name = Path(filename).name.strip().replace(" ", "_")
     return name or "uploaded_document"
+
+
+def get_user_upload_dir(user_id: str) -> Path:
+    normalized_user_id = user_id.strip()
+    if not normalized_user_id:
+        raise ValueError("user_id is required")
+
+    user_directory = hashlib.sha256(
+        normalized_user_id.encode("utf-8")
+    ).hexdigest()
+    return RAW_UPLOAD_DIR / user_directory
 
 
 def reset_storage() -> None:
@@ -56,24 +73,34 @@ def get_active_vectorstore_dir() -> Path:
     return Path(active_path.read_text(encoding="utf-8").strip())
 
 
-def has_indexed_uploads() -> bool:
-    chunks_path = Path(CHUNKS_PATH)
+def has_indexed_uploads(user_id:str) -> bool:
+    chunks = [
+        chunk
+        for chunk in load_existing_chunks()
+        if chunk.get("user_id") == user_id
+    ]
+
     persist_dir = get_active_vectorstore_dir()
-    return chunks_path.exists() and (persist_dir / "chroma.sqlite3").exists()
+
+    return bool(chunks) and (persist_dir / "chroma.sqlite3").exists()
 
 
-def get_upload_status() -> dict:
-    chunks = load_existing_chunks()
+def get_upload_status(user_id: str) -> dict:
+    chunks = [
+        chunk
+        for chunk in load_existing_chunks()
+        if chunk.get("user_id") == user_id
+    ]
     source_files = sorted({chunk.get("source_file", "unknown") for chunk in chunks})
 
     return {
-        "has_sources": has_indexed_uploads() and bool(chunks),
+        "has_sources": has_indexed_uploads(user_id),
         "total_chunks": len(chunks),
         "files": source_files,
     }
 
 
-def save_upload(filename: str, content: bytes) -> Path:
+def save_upload(filename: str, content: bytes, user_id: str) -> Path:
     safe_name = clean_filename(filename)
     suffix = Path(safe_name).suffix.lower()
 
@@ -81,8 +108,9 @@ def save_upload(filename: str, content: bytes) -> Path:
         allowed = ", ".join(sorted(SUPPORTED_EXTENSIONS))
         raise ValueError(f"Unsupported file type. Upload one of: {allowed}")
 
-    RAW_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = RAW_UPLOAD_DIR / safe_name
+    upload_dir = get_user_upload_dir(user_id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / safe_name
     file_path.write_bytes(content)
     return file_path
 
@@ -94,7 +122,12 @@ def load_existing_chunks() -> list[dict]:
         return []
 
     with chunks_path.open("r", encoding="utf-8") as file:
-        return json.load(file)
+        chunks = json.load(file)
+
+    for chunk in chunks:
+        chunk.setdefault("user_id", "legacy-user")
+
+    return chunks
 
 
 def save_chunk_dicts(chunks: list[dict]) -> None:
@@ -112,6 +145,7 @@ def build_vectorstore_from_chunks(chunks: list[dict], persist_dir: Path) -> None
             page_content=chunk["text"],
             metadata={
                 "chunk_id": chunk["chunk_id"],
+                "user_id": chunk["user_id"],
                 "source_file": chunk["source_file"],
                 "page_number": chunk["page_number"],
                 "chunk_index": chunk["chunk_index"],
@@ -119,7 +153,10 @@ def build_vectorstore_from_chunks(chunks: list[dict], persist_dir: Path) -> None
                 "document_type": chunk["document_type"],
                 "created_at": chunk["created_at"],
                 "document_id" :chunk.get("document_id"),
-                "file_hash" :chunk.get("file_hash")
+                "file_hash" :chunk.get("file_hash"),
+                "context":(chunk.get("metadata") or {}).get("context",""),
+                "heading_path":(chunk.get("metadata")  or  {}).get("heading_path",""),
+                "section_title":(chunk.get ("metadata") or {}).get("section_title","")
             },
         )
         for chunk in chunks
@@ -145,6 +182,7 @@ def append_chunks_to_vectorstore(chunks: list[dict], persist_dir: Path) -> None:
             page_content=chunk["text"],
             metadata={
                 "chunk_id": chunk["chunk_id"],
+                "user_id": chunk["user_id"],
                 "source_file": chunk["source_file"],
                 "page_number": chunk["page_number"],
                 "chunk_index": chunk["chunk_index"],
@@ -153,6 +191,9 @@ def append_chunks_to_vectorstore(chunks: list[dict], persist_dir: Path) -> None:
                 "created_at": chunk["created_at"],
                 "document_id": chunk.get("document_id"),
                 "file_hash": chunk.get("file_hash"),
+                "context":(chunk.get("metadata")  or {}).get("context",""),
+                "heading_path":(chunk.get("metadata")  or  {}).get("heading_path",""),
+                "section_title":(chunk.get("metadata")  or {}).get("section_title","")
             },
         )
         for chunk in chunks
@@ -169,20 +210,32 @@ def append_chunks_to_vectorstore(chunks: list[dict], persist_dir: Path) -> None:
     vectorstore.add_documents(documents)
 
 
-def ingest_uploaded_files(uploaded_files: list[tuple[str, bytes]], replace: bool = True) -> dict:
-    if replace:
-        reset_storage()
+def ingest_uploaded_files(uploaded_files: list[tuple[str, bytes]],
+                          user_id: str,
+                           replace: bool = True) -> dict:
+    all_existing_chunks = load_existing_chunks()
 
-    existing_chunks = [] if replace else load_existing_chunks()
+    if replace:
+        existing_chunks = [
+            chunk
+            for chunk in all_existing_chunks
+            if chunk.get("user_id") != user_id
+        ]
+        remove_documents_for_user(user_id)
+    else:
+        existing_chunks = all_existing_chunks
     new_chunks = []
     saved_files = []
     skipped_files =[]
     for filename, content in uploaded_files:
-        file_path = save_upload(filename, content)
+        file_path = save_upload(filename, content, user_id)
         saved_files.append(file_path.name)
         
         file_hash = compute_file_hash(file_path)
-        existing_document = find_document_by_hash(file_hash)
+        existing_document = find_document_by_hash(
+            file_hash=file_hash,
+            user_id=user_id,
+        )
         
         if existing_document is not None and existing_document.get("status") == "completed":
             skipped_files.append(file_path.name)
@@ -192,6 +245,7 @@ def ingest_uploaded_files(uploaded_files: list[tuple[str, bytes]], replace: bool
 
         document_record = {
             "document_id":document_id,
+            "user_id":user_id,
             "source_file":str(file_path),
             "file_name": file_path.name,
             "document_type":Path(file_path).suffix.lower().lstrip("."),
@@ -199,7 +253,7 @@ def ingest_uploaded_files(uploaded_files: list[tuple[str, bytes]], replace: bool
             "created_at" : datetime.now().isoformat(),
             "status": "pending",
             "num_chunks":0,
-            "num_pages":None
+            "num_pages":None,
         }
         add_document_record(document_record)
         try:
@@ -207,6 +261,7 @@ def ingest_uploaded_files(uploaded_files: list[tuple[str, bytes]], replace: bool
                 file_path=file_path,
                 chunk_size=800,
                 chunk_overlap=150,
+                user_id=user_id,
                 document_id=document_id,
                 file_hash=file_hash
             )
@@ -262,10 +317,10 @@ def ingest_uploaded_files(uploaded_files: list[tuple[str, bytes]], replace: bool
     else:
         append_chunks_to_vectorstore(new_chunks, persist_dir=active_persist_dir)
 
-        return {
-            "files": saved_files,
-            "skipped_files":skipped_files,
-            "new_chunks": len(new_chunks),
-            "total_chunks": len(all_chunks),
-            "replace": replace,
-        }
+    return {
+        "files": saved_files,
+        "skipped_files":skipped_files,
+        "new_chunks": len(new_chunks),
+        "total_chunks": len(all_chunks),
+        "replace": replace,
+    }

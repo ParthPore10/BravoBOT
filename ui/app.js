@@ -3,6 +3,7 @@ const messages = document.querySelector("#messages");
 const queryInput = document.querySelector("#queryInput");
 const sendButton = document.querySelector("#sendButton");
 const apiUrlInput = document.querySelector("#apiUrl");
+const userIdInput = document.querySelector("#userId");
 const candidateKInput = document.querySelector("#candidateK");
 const finalKInput = document.querySelector("#finalK");
 const statusDot = document.querySelector("#statusDot");
@@ -18,6 +19,12 @@ const uploadProgress = document.querySelector("#uploadProgress");
 const selectedFiles = document.querySelector("#selectedFiles");
 let hasIndexedSources = false;
 let isUploading = false;
+
+function getUserHeaders() {
+  return {
+    "X-User-ID": userIdInput.value.trim(),
+  };
+}
 
 function setStatus(text, state = "ready") {
   statusText.textContent = text;
@@ -184,6 +191,7 @@ async function askQuestion(query) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getUserHeaders(),
     },
     body: JSON.stringify({
       query,
@@ -211,6 +219,7 @@ async function askQuestionStream(query, onToken, onSources) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getUserHeaders(),
     },
     body: JSON.stringify({
       query,
@@ -300,7 +309,9 @@ function getSourceStatusUrl() {
 
 async function loadSourceStatus() {
   try {
-    const response = await fetch(getSourceStatusUrl());
+    const response = await fetch(getSourceStatusUrl(), {
+      headers: getUserHeaders(),
+    });
     if (!response.ok) {
       return;
     }
@@ -334,6 +345,7 @@ async function uploadDocuments() {
 
   const response = await fetch(getUploadUrl(), {
     method: "POST",
+    headers: getUserHeaders(),
     body: formData,
   });
 
@@ -353,7 +365,9 @@ function sleep(ms) {
 
 async function pollUploadJob(jobId) {
   while (true) {
-    const response = await fetch(`${getApiBaseUrl()}/jobs/${jobId}`);
+    const response = await fetch(`${getApiBaseUrl()}/jobs/${jobId}`, {
+      headers: getUserHeaders(),
+    });
     const job = await response.json().catch(() => ({}));
 
     if (!response.ok) {
